@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DAO</title>
+    <style>
+        .dao-only {
+            display: none;
+        }
+
+        .non-dao-only {
+            display: none;
+        }
+
+        .dao-member .dao-only {
+            display: block;
+        }
+
+        .non-dao-member .non-dao-only {
+            display: block;
+        }
+    </style>
+
+</head>
+
+<body>
+    <div>
+        <p>Balance: <span class="balanceValue">0</span></p>
+        <button class="connectWalletBtn">Connect a wallet (MetaMask)</button>
+        <div class="proposalsList"></div>
+    </div>
+
+    <div class="non-dao-only">
+        <h3>Buy RTK coins</h3>
+        
+        <input type="number" placeholder="1 RTK"  class="buyRTKinput" required>
+        <button class="buyRTKbtn">Buy</button>
+
+        <h2>Delegate tokens</h2>
+        <form class="delegateForm">
+            Delegate to: <input type="text" required class="delegateAddr" placeholder="Address 0x..."> </br>
+            Value: <input type="number" min="1" class="delegateValue" required></br>
+            Proposal id: <input type="number" min="0" class="delegateId" required>
+        </form>
+        <button class="delegateBtn">Delegate</button>
+        
+    
+    <div class="myDelegations"></div>
+    </div>
+
+    <div class="dao-only">
+        <h2>Create a proposal</h2>
+        <form class="createProposalForm">
+            <label for="proposalType">Proposal type:</label>
+            <select class="proposalType" name="proposalType">
+                <option value="0">Type A (invest to new StartUp)</option>
+                <option value="1">Type B (invest to StartUp)</option>
+                <option value="2">Type C (add a DAO member)</option>
+                <option value="3">Type D (remove a DAO member)</option>
+                <option value="4">Type E (manage PROFI)</option>
+                <option value="5">Type F (manage RTK)</option>
+            </select> </br>
+            Duration (min): <input type="number" min="1" class="durationMin" required> </br>
+            Value for change coins course: <input type="number" class="valueForChange" min="1" required> </br>
+            Need votes for quorum: <input type="number" class="needVotes" min="1" required> </br>
+            Target: <input type="text" class="target" required> </br>
+            <label for="quorumMechanism">Quorum Mechanism:</label>
+            <select name="quorumMechanism" class="quorumMechanism">
+                <option value="0">Simple (> 50% for)</option>
+                <option value="1">Super (2/3 for)</option>
+                <option value="2">Weighed (2/3 for + 1 voice)</option>
+            </select> </br>
+        </form>
+        <button class="createPropsalBtn">Create proposal</button>
+
+          <h2>Vote</h2>
+        <form class="voteForm">
+            Proposal id: <input type="number" min="0" class="voteProposalId"> </br>
+            Tokens to vote: <input type="number" min="1" class="voteValue" required>
+            <label for="voteSupport">Support:</label>
+            <select name="voteSupport" class="voteSupport">
+                <option value="true">For</option></br>
+                <option value="false">Against</option></br>
+            </select>
+        </form>
+        <button class="voteBtn">Vote</button>
+
+         <h2>Delete proposal</h2>
+        Proposal ID: <input type="number" required class="deleteInput" placeholder="Proposal ID"> </br>
+        <button class="deleteBtn">Delete</button>
+    </div>
+
+
+    <script type="module" src="./showNotifications.js"></script>
+    <script type="module" src="./balances.js"></script>
+    <script type="module" src="./init.js"></script>
+    <script type="module" src="./buyRTK.js"></script>
+    <script type="module" src="./createPropsal.js"></script>
+    <script type="module" src="./vote.js"></script>
+    <script type="module" src="./delegate.js"></script>
+    <script type="module" src="./deleteProposal.js"></script>
+    <script type="module" src="./proposals.js"></script>
+    <script type="module" src="./delegations.js"></script>
+</body>
+
+</html>
