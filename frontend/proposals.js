@@ -1,4 +1,4 @@
-import { DAOcontract,signer } from "./init.js";
+import { DAOcontract, signer } from "./init.js";
 import { ethers } from "./node_modules/ethers/dist/ethers.js";
 import { showNotification } from "./showNotifications.js";
 
@@ -20,7 +20,6 @@ export async function loadProposals() {
 
         const [
             status,
-            startTime,
             endTime,
             quorumMechanism,
             proposalType,
@@ -30,13 +29,14 @@ export async function loadProposals() {
             votesAgainst
         ] = result;
 
-  
-        if (Number(status) === 0) { 
+
+        if (Number(status) === 0) {
             proposalsContainer.innerHTML += `
   <div class="proposal" data-id="${i}">
       <p>ID: ${i} | Type: ${proposalType}</p>
       <p>Proposer: ${proposer}</p>
       <p>Target: ${target}</p>
+      <p>Quorum mechanism ${quorumMechanism} </p>
      <p>FOR: ${(Number(ethers.formatUnits(votesFor, 12))).toFixed(2)} | AGAINST: ${(Number(ethers.formatUnits(votesAgainst, 12))).toFixed(2)}</p>
       <p>Ends in: <span class="timer" data-end="${Number(endTime)}"></span></p>
       <button class="voteFromCardBtn">Vote</button>
@@ -52,7 +52,7 @@ export async function loadProposals() {
         const timerSpan = card.querySelector('.timer');
         const endSec = Number(timerSpan.dataset.end);
 
-  
+
         btn.addEventListener('click', () => {
             document.querySelector('.voteProposalId').value = id;
             showNotification(`Voting for proposal #${id}`);
