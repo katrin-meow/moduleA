@@ -4,105 +4,112 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DAO</title>
+    <title>ДАО</title>
     <style>
-        .dao-only {
+        body {
+            background-color: brown;
+        }
+
+        .daoOnly {
             display: none;
         }
 
-        .non-dao-only {
+        .nonDaoOnly {
             display: none;
         }
 
-        .dao-member .dao-only {
+        .daoMember .daoOnly {
             display: block;
         }
 
-        .non-dao-member .non-dao-only {
+        .nonDaoMember .nonDaoOnly {
             display: block;
         }
     </style>
-
 </head>
 
 <body>
     <div>
-        <p>Balance: <span class="balanceValue">0</span></p>
-        <button class="connectWalletBtn">Connect a wallet (MetaMask)</button>
-        <div class="proposalsList"></div>
+        <h1>Профессионалы 2026</h1>
+        <button class="connectWalletBtn">Подключить кошелек</button>
+        <p>Баланс <span class="balanceValue">0</span></p>
+        <div class="proposalList"></div>
     </div>
 
-    <div class="non-dao-only">
-        <h3>Buy RTK coins</h3>
-        
-        <input type="number" placeholder="1 RTK"  class="buyRTKinput" required>
-        <button class="buyRTKbtn">Buy</button>
+    <div class="daoOnly">
+        <div>
+            <h3>Создать предложение</h3>
+            <form>
+                <label for="propType">Тип предложения:</label>
+                <select name="propType" class="propType">
+                    <option value="0">A - Инвестирование в новый Старт ап</option>
+                    <option value="1">B - Инвестирование в существующий Старт ап</option>
+                    <option value="2">C - Добавление участника в систему</option>
+                    <option value="3">D - Удаление участника из системы</option>
+                    <option value="4">E - Изменение курса ситемного токена</option>
+                    <option value="5">F - Изменение курса Wrap-токена</option>
+                </select><br>
+                <label for="quorum">Механизм достижения кворума:</label>
+                <select name="quorum" class="quorum">
+                    <option value="0">Простой - 50% + 1 голос</option>
+                    <option value="1">Супер - 2/3 голосов (ЗА)</option>
+                    <option value="2">Взвешенный - зависит от веса голоса</option>
+                </select><br>
+                Цель: <input type="text" required placeholder="0x" class="createTarget"><br>
+                Количество голосов для кворума: <input type="number" placeholder="1" required class="createNeed"><br>
+                Новый курс токенов: <input type="number" placeholder="1" required class="createValue"><br>
+                Длительность (мин): <input type="number" placeholder="5 мин" required class="createDuration"><br>
+            </form>
+            <button class="createBtn">Создать</button>
+        </div>
 
-        <h2>Delegate tokens</h2>
-        <form class="delegateForm">
-            Delegate to: <input type="text" required class="delegateAddr" placeholder="Address 0x..."> </br>
-            Value: <input type="number" min="1" class="delegateValue" required></br>
-            Proposal id: <input type="number" min="0" class="delegateId" required>
-        </form>
-        <button class="delegateBtn">Delegate</button>
-        
-    
-    <div class="myDelegations"></div>
+        <div>
+            <h3>Проголосовать</h3>
+            <form>
+                <label for="support">Голос:</label>
+                <select name="support" class="support">
+                    <option value="true">ЗА</option>
+                    <option value="false">ПРОТИВ</option>
+                </select><br>
+                Номер предложения: <input type="number" required placeholder="0" class="voteId"><br>
+                Количество токенов: <input type="number" placeholder="1 PROFI" required class="voteValue"><br>
+            </form>
+            <button class="voteBtn">Отдать голос</button>
+        </div>
+
+        <div>
+            <h3>Удалить предложение</h3>
+            Номер предложения: <input type="number" required placeholder="0" class="deleteId"><br>
+            <button class="deleteBtn">Удалить</button>
+        </div>
     </div>
 
-    <div class="dao-only">
-        <h2>Create a proposal</h2>
-        <form class="createProposalForm">
-            <label for="proposalType">Proposal type:</label>
-            <select class="proposalType" name="proposalType">
-                <option value="0">Type A (invest to new StartUp)</option>
-                <option value="1">Type B (invest to StartUp)</option>
-                <option value="2">Type C (add a DAO member)</option>
-                <option value="3">Type D (remove a DAO member)</option>
-                <option value="4">Type E (manage PROFI)</option>
-                <option value="5">Type F (manage RTK)</option>
-            </select> </br>
-            Duration (min): <input type="number" min="1" class="durationMin" required> </br>
-            Value for change coins course: <input type="number" class="valueForChange" min="1" required> </br>
-            Need votes for quorum: <input type="number" class="needVotes" min="1" required> </br>
-            Target: <input type="text" class="target" required> </br>
-            <label for="quorumMechanism">Quorum Mechanism:</label>
-            <select name="quorumMechanism" class="quorumMechanism">
-                <option value="0">Simple (> 50% for)</option>
-                <option value="1">Super (2/3 for)</option>
-                <option value="2">Weighed (2/3 for + 1 voice)</option>
-            </select> </br>
-        </form>
-        <button class="createPropsalBtn">Create proposal</button>
-
-          <h2>Vote</h2>
-        <form class="voteForm">
-            Proposal id: <input type="number" min="0" class="voteProposalId"> </br>
-            Tokens to vote: <input type="number" min="1" class="voteValue" required>
-            <label for="voteSupport">Support:</label>
-            <select name="voteSupport" class="voteSupport">
-                <option value="true">For</option></br>
-                <option value="false">Against</option></br>
-            </select>
-        </form>
-        <button class="voteBtn">Vote</button>
-
-         <h2>Delete proposal</h2>
-        Proposal ID: <input type="number" required class="deleteInput" placeholder="Proposal ID"> </br>
-        <button class="deleteBtn">Delete</button>
+    <div class="nonDaoOnly">
+        <div>
+            <h3>Купить RTK</h3>
+            <input type="number" required placeholder="1 RTK" class="buyRTKinput"><br>
+            <button class="buyRTKbtn">Купить</button>
+        </div>
+        <div>
+            <h3>Делегировать токены на голос участника системы</h3>
+            <form>
+                Номер предложения: <input type="number" required placeholder="0" class="delegateId"><br>
+                Цель: <input type="text" required placeholder="0x" class="delegateTarget"><br>
+                Количество токенов: <input type="number" placeholder="1 RTK" required class="delegateValue"><br>
+            </form>
+            <button class="delegateBtn">Делегировать</button>
+        </div>
+        <div class="delegationsList"></div>
     </div>
-
-
-    <script type="module" src="./showNotifications.js"></script>
-    <script type="module" src="./balances.js"></script>
-    <script type="module" src="./init.js"></script>
-    <script type="module" src="./buyRTK.js"></script>
-    <script type="module" src="./createPropsal.js"></script>
-    <script type="module" src="./vote.js"></script>
-    <script type="module" src="./delegate.js"></script>
-    <script type="module" src="./deleteProposal.js"></script>
-    <script type="module" src="./proposals.js"></script>
     <script type="module" src="./delegations.js"></script>
+    <script type="module" src="./buyRTK.js"></script>
+    <script type="module" src="./delegate.js"></script>
+    <script type="module" src="./proposals.js"></script>
+    <script type="module" src="./balances.js"></script>
+    <script type="module" src="./createProposal.js"></script>
+    <script type="module" src="./vote.js"></script>
+    <script type="module" src="./deleteProposal.js"></script>
+    <script type="module" src="./init.js"></script>
 </body>
 
 </html>

@@ -1,48 +1,47 @@
-import { abiDAO, abiPROFI, abiRTK } from "./abi.js";
-import { ethers } from "./node_modules/ethers/dist/ethers.js";
-import { showNotification } from "./showNotifications.js";
-import { loadProposals } from "./proposals.js";
 import { updateBalance } from "./balances.js";
+import { loadMyDeleg } from "./delegations.js";
+import { ethers } from "./node_modules/ethers/dist/ethers.js";
+import { loadProposals } from "./proposals.js";
 
-const DAOaddress = "0x";
-const PROFIaddress = "0x";
-const RTKaddress = "0x";
-let provider;
-let signer;
-let DAOcontract;
-let PROFIcontract;
-let RTKcontract;
-const connectWalletBtn = document.querySelector(".connectWalletBtn");
+const connectWalletBtn = document.querySelector('.connectWalletBtn');
+
+export let provider;
+export let signer;
+export let DAOcontract;
+export let PROFIcontract;
+export let RTKcontract;
+
+async function loadContractData(name) {
+    const responce = await fetch(`./dataContracts/${name}.json`);
+    return await responce.json();
+}
+
 async function connectWallet(event) {
-    provider = new ethers.BrowserProvider(window.ethereum);
-    await provider.send("eth_requestAccounts", []);
-    signer = await provider.getSigner();
-    DAOcontract = new ethers.Contract(DAOaddress, abiDAO, signer);
-    PROFIcontract = new ethers.Contract(PROFIaddress, abiPROFI, signer);
-    RTKcontract = new ethers.Contract(RTKaddress, abiRTK, signer);
-    const userAddr = await signer.getAddress();
-    showNotification(`Wallet connected: ${userAddr}`);
-    connectWalletBtn.textContent = 'Connected';
-    connectWalletBtn.disabled = true;
-    const isMember = await DAOcontract.isDAOmember(userAddr);
-    document.body.className = isMember ? 'dao-member' : 'non-dao-member';
+    try {
+        provider = new ethers.BrowserProvider(window.ethereum);
+        await provider.send("eth_requestAccounts", []);
+        signer = await provider.getSigner();
+        const userAddress = await signer.getAddress();
 
-    updateBalance();
-    loadProposals();
+        const DAOdata = await loadContractData("DAO");
+        const PROFIdata = await loadContractData("SystemToken");
+        const RTKdata = await loadContractData("WrapToken");
 
-    setInterval(updateBalance, 10000);
+        DAOcontract = new ethers.Contract(DAOdata.address, DAOdata.abi, signer);
+        PROFIcontract = new ethers.Contract(PROFIdata.address, PROFIdata.abi, signer);
+        RTKcontract = new ethers.Contract(RTKdata.address, RTKdata.abi, signer);
+
+        const isDAO = await DAOcontract.isDAO(userAddress);
+        document.body.className = isDAO ? "daoMember" : 'nonDaoMember';
+        connectWalletBtn.textContent = `Подключен: ${userAddress}`;
+        connectWalletBtn.disabled = true;
+        await updateBalance();
+        await loadProposals();
+        await loadMyDeleg();
+    } catch (error) {
+        console.error(error);
+    }
+
 }
 connectWalletBtn.addEventListener('click', connectWallet);
 connectWallet();
-export {
-    provider,
-    signer,
-    DAOcontract,
-    PROFIcontract,
-    RTKcontract,
-    DAOaddress
-}
-
-
-
-

@@ -1,32 +1,30 @@
 import { DAOcontract } from "./init.js";
-import { ethers } from "./node_modules/ethers/dist/ethers.js";
-import { showNotification } from "./showNotifications.js";
-
+import { updateBalance } from "./balances.js";
+import { loadProposals } from "./proposals.js";
 
 const deleteBtn = document.querySelector('.deleteBtn');
-const deleteInput = document.querySelector('.deleteInput');
 
-deleteBtn.addEventListener('click', async () => {
-    const proposald = Number(deleteInput.value);
-
-    if (Number.isNaN(proposald) || proposald < 0) {
-        showNotification('Enter valid Proposal ID', 'error');
-        return;
-    }
-
+async function deleteProposal() {
+    const id = Number(document.querySelector('.deleteId').value);
     try {
-        deleteBtn.textContent = 'Pending...';
+        deleteBtn.textContent = 'Удаление...';
         deleteBtn.disabled = true;
 
-        const tx = await DAOcontract.deleteProposal(proposald);
-        await tx.wait();
+        const tx = await DAOcontract.deleteProposal(id);
 
-        showNotification(`Proposal: №${proposald} deleted!`, 'success');
-        deleteInput.value = '';
-    } catch (err) {
-        showNotification(err.reason || 'Delete failed');
+        await tx.wait();
+        await updateBalance();
+        await loadProposals();
+        alert (`Вы удалили предложение №${id}`);
+        document.querySelector('.deleteId').value = '';
+    } catch (error) {
+        console.error(error);
     } finally {
-        deleteBtn.textContent = 'Delete proposal';
+        deleteBtn.textContent = 'Удалить';
         deleteBtn.disabled = false;
     }
-});
+}
+deleteBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    deleteProposal();
+})

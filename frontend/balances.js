@@ -1,27 +1,15 @@
 import { ethers } from "./node_modules/ethers/dist/ethers.js";
-import { signer, DAOcontract, PROFIcontract, RTKcontract } from "./init.js";
-let currentUserRole = 'unknown';
+import { DAOcontract, PROFIcontract, RTKcontract, signer } from "./init.js";
+
+const balanceValue = document.querySelector('.balanceValue');
 
 export async function updateBalance() {
-    if (!DAOcontract || !signer) {
-        console.log('Contracts not ready');
-        return;
+    const userAddress = await signer.getAddress();
+    const isDAO = await DAOcontract.isDAO(userAddress);
+    const tokenContract = isDAO ? PROFIcontract : RTKcontract;
+    const raw = await tokenContract.balanceOf(userAddress);
+    const balance = Number(ethers.formatUnits(raw.toString(), 12)).toFixed(1);
+    if (balanceValue) {
+        balanceValue.textContent = `${isDAO ? "PROFI" : "RTK"}: ${balance}`;
     }
-
-    try {
-        const userAddr = await signer.getAddress();
-        const isMember = await DAOcontract.isDAOmember(userAddr);
-        currentUserRole = isMember ? 'daoMember' : 'nonMember';
-
-        const tokenContract = isMember ? PROFIcontract : RTKcontract;
-        const raw = await tokenContract.balanceOf(userAddr);
-        const balance = ethers.formatUnits(raw, 12);
-
-        const elem = document.querySelector('.balanceValue');
-        if (elem) {
-            elem.textContent = `${isMember ? 'PROFI' : 'RTK'}: ${balance}`;
-        }
-    } catch (e) {
-        console.error('updateBalance error:', e);
-    }
-};
+}

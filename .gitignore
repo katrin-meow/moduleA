@@ -1,8 +1,0 @@
-# contracts
-artifacts/
-.states/
-.deps/
-.deploys/
-
-# frontend  
-node_modules/

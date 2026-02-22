@@ -1,14 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.30;
+
 import "./SystemToken.sol";
 import "./WrapToken.sol";
 
 contract DAO {
     SystemToken public PROFI;
     WrapToken public RTK;
+    uint public proposalCount;
     uint public PROFIprice = 3;
     uint public RTKprice = 2;
-    uint public proposalCount;
 
     constructor(
         address[] memory _initialUsers,
@@ -17,23 +18,15 @@ contract DAO {
     ) {
         PROFI = SystemToken(_SystemToken);
         RTK = WrapToken(_WrapToken);
+
         for (uint i = 0; i < _initialUsers.length; i++) {
-            DAOmem[_initialUsers[i]] = true;
+            DAOmembers[_initialUsers[i]] = true;
         }
     }
-   
-    mapping(address => bool) private DAOmem;
-    mapping(uint => Proposal) internal proposals;
-    mapping(uint => mapping(address => uint)) internal voterTokens;
-    mapping(uint => address[]) internal proposalVoters;
-    mapping(uint => address[]) internal proposalDelegate;
-    mapping(uint => mapping(address => uint)) internal delegateAmount;
-    mapping(address => uint) internal delegatedWeight;
 
-    enum ProposalStatus {
-        Active,
-        Finished,
-        Deleted
+    modifier onlyDAO() {
+        require(DAOmembers[msg.sender] == true);
+        _;
     }
 
     enum ProposalType {
@@ -48,217 +41,227 @@ contract DAO {
     enum Quorum {
         Simple,
         Super,
-        Weighed
+        Weighted
     }
 
-    struct Delegation {
-        address to;
-        uint value;
+    enum ProposalStatus {
+        Active,
+        Finished,
+        Deleted
     }
 
     struct Proposal {
-        ProposalStatus status;
-        ProposalType proposalType;
-        Quorum quorum;
-        address proposer;
         address target;
+        address proposer;
         uint startTime;
         uint endTime;
         uint votesFor;
         uint votesAgainst;
-        bool isDeleted;
-        bool isExecuted;
         uint valueForChange;
         uint needVotes;
+        ProposalStatus status;
+        ProposalType propType;
+        Quorum quorum;
     }
 
-    event ProposalCreated(uint indexed _proposalId, ProposalType proposalType);
+    struct Delegation {
+        uint proposalId;
+        address to;
+        uint value;
+    }
 
-    event Executed(uint indexed _proposalId);
+    mapping(address => bool) private DAOmembers;
+    mapping(uint => Proposal) internal proposals;
+    mapping(uint => mapping(address => uint)) internal voterTokens;
+    mapping(uint => mapping(address => uint)) internal delegatedValue;
+    mapping(uint => address[]) internal proposalVoters;
+    mapping(uint => address[]) internal proposalDelegaters;
+    mapping(address => uint) internal delegatedWeight;
+    mapping(address => Delegation[]) internal userDelegations;
 
     event CastVote(
-        address _voter,
+        uint indexed _proposalId,
         bool _support,
-        uint _value,
-        uint indexed _proposalId
+        uint _value
     );
+    event Delegated(uint indexed _proposalId, address _to, uint _value);
 
-    event Delegated(
-        address from,
-        address _to,
-        uint _value,
-        uint indexed _proposalId
-    );
-
-    modifier OnlyDAOmem() {
-        require(DAOmem[msg.sender] = true, "d");
-        _;
-    }
-
-    function buyRTK() external payable {
-        require(msg.value > 0, "value must be more than zero");
-        uint rtkAmount = msg.value / 1 ether; 
-        RTK.transferFrom(
-            address(RTK),
-            msg.sender,
-            rtkAmount * (10 ** RTK.decimals())
-        ); 
-    }
-
+    //1
     function checkQuorum(uint _proposalId) internal view returns (bool) {
         Proposal storage p = proposals[_proposalId];
-        uint totalValue = p.votesFor + p.votesAgainst;
+
+        uint totalVotes = p.votesFor + p.votesAgainst;
+        if (totalVotes <= 0) return false;
+
         if (p.quorum == Quorum.Simple) {
-            return p.votesFor > p.votesAgainst;
+            return p.votesFor * 2 > totalVotes;
         } else if (p.quorum == Quorum.Super) {
-            if (totalValue == 0) return false;
-            return p.votesFor * 2 > totalValue;
-        } else if (p.quorum == Quorum.Weighed) {
-            if (totalValue == 0) return false;
-            return p.votesFor * 3 >= totalValue * 2;
+            return p.votesFor * 3 >= totalVotes * 2;
+        } else if (p.quorum == Quorum.Weighted) {
+            return p.votesFor > p.votesAgainst;
         }
         return false;
     }
-    
+
+    //2
     function createProposal(
-        ProposalType _proposalType,
-        uint _durationMin,
-        uint _valueForChange,
-        address _target,
-        uint _needVotes,
-        Quorum _quorum
-    ) external OnlyDAOmem returns (uint) {
-        require(_durationMin > 0, "jf");
+        address target,
+        uint duration,
+        ProposalType propType,
+        Quorum quorum,
+        uint needVotes,
+        uint valueForChange
+    ) external onlyDAO returns (uint) {
         uint id = proposalCount++;
         Proposal storage p = proposals[id];
-        p.proposalType = _proposalType;
-        p.status = ProposalStatus.Active;
-        p.quorum = _quorum;
+
+        p.target = target;
         p.proposer = msg.sender;
-        p.target = _target;
-        p.valueForChange = _valueForChange;
-        p.needVotes = _needVotes;
         p.startTime = block.timestamp;
-        p.endTime = block.timestamp + _durationMin * 60;
-        if (
-            p.proposalType == ProposalType.A || p.proposalType == ProposalType.B
-        ) {
-            require(_quorum == Quorum.Weighed);
+        p.endTime = block.timestamp + (duration * 60);
+        p.valueForChange = valueForChange;
+        p.needVotes = needVotes;
+        p.status = ProposalStatus.Active;
+        p.propType = propType;
+        p.quorum = quorum;
+
+        if (p.propType == ProposalType.A || p.propType == ProposalType.B) {
+            require(p.quorum == Quorum.Weighted);
         } else {
-            require(_quorum != Quorum.Weighed);
+            require(p.quorum != Quorum.Weighted);
         }
-        emit ProposalCreated(id, _proposalType);
+
         return id;
     }
-    
-    function vote(uint _proposalId, bool _support, uint _value) external {
+
+    //3
+    function vote(
+        uint _proposalId,
+        bool _support,
+        uint _value
+    ) external onlyDAO {
         Proposal storage p = proposals[_proposalId];
-        require(_value > 0);
-        require(block.timestamp < p.endTime);
+
+        voterTokens[_proposalId][msg.sender] = _value;
+        proposalVoters[_proposalId].push(msg.sender);
 
         PROFI.transferFrom(msg.sender, address(this), _value);
 
-        uint _weight = (_value / PROFIprice) +
+        uint weight = (_value / PROFIprice) +
             (delegatedWeight[msg.sender] / RTKprice);
 
-        proposalVoters[_proposalId].push(msg.sender);
-        voterTokens[_proposalId][msg.sender] = _value;
-
         if (_support) {
-            p.votesFor += _weight;
+            p.votesFor += weight;
         } else {
-            p.votesAgainst += _weight;
+            p.votesAgainst += weight;
         }
-        if (p.needVotes > p.votesFor && checkQuorum(_proposalId)) {
-            if (
-                p.proposalType == ProposalType.A ||
-                p.proposalType == ProposalType.B
-            ) {
+
+        if (p.needVotes >= p.votesFor && checkQuorum(_proposalId)) {
+            if (p.propType == ProposalType.A || p.propType == ProposalType.B) {
                 PROFI.transferFrom(address(this), p.target, p.needVotes);
-            } else if (p.proposalType == ProposalType.C) {
-                DAOmem[p.target] = true;
-            } else if (p.proposalType == ProposalType.D) {
-                DAOmem[p.target] = false;
-            } else if (p.proposalType == ProposalType.E) {
+            } else if (p.propType == ProposalType.C) {
+                DAOmembers[p.target] = true;
+            } else if (p.propType == ProposalType.D) {
+                DAOmembers[p.target] = false;
+            } else if (p.propType == ProposalType.E) {
                 PROFIprice = p.valueForChange;
-            } else if (p.proposalType == ProposalType.F) {
+            } else if (p.propType == ProposalType.E) {
                 RTKprice = p.valueForChange;
             }
+       
         }
-        p.isExecuted = true;
-        emit CastVote(msg.sender, _support, _weight, _proposalId);
-        emit Executed(_proposalId);
+        emit CastVote(_proposalId, _support, _value);
     }
-    
-    function delegate(address _to, uint _value, uint _proposalId) external {
-        require(_to != address(0), "invalid address");
-        require(_value > 0);
-        RTK.transferFrom(msg.sender, address(this), _value);
-        proposalDelegate[_proposalId].push(msg.sender);
-        delegateAmount[_proposalId][msg.sender] += _value;
-        delegatedWeight[_to] += _value;
-    }
-    
-    function deleteProposal(uint _proposalId) external OnlyDAOmem {
+
+    //4
+    function deleteProposal(uint _proposalId) external onlyDAO {
         Proposal storage p = proposals[_proposalId];
         require(p.proposer == msg.sender);
-        require(block.timestamp <= p.endTime);
-        require(!p.isDeleted);
-        p.isDeleted = true;
         p.status = ProposalStatus.Deleted;
 
         address[] memory voters = proposalVoters[_proposalId];
         for (uint i = 0; i < voters.length; i++) {
             address voter = voters[i];
-            uint amount = voterTokens[_proposalId][voter];
-            if (amount > 0) {
-                PROFI.transfer(voter, amount);
+            uint value = voterTokens[_proposalId][voter];
+            if (value > 0) {
+                PROFI.transfer(voter, value);
                 voterTokens[_proposalId][voter] = 0;
             }
         }
 
-        address[] memory delegateVoters = proposalDelegate[_proposalId];
-        for (uint256 i = 0; i < delegateVoters.length; i++) {
-            address delegator = delegateVoters[i];
-            uint256 amount = delegateAmount[_proposalId][delegator];
-
-            if (amount > 0) {
-                RTK.transferFrom(address(this), delegator, amount);
-                delegateAmount[_proposalId][delegator] = 0;
+        address[] memory delegaters = proposalDelegaters[_proposalId];
+        for (uint i = 0; i < delegaters.length; i++) {
+            address delegater = delegaters[i];
+            uint value = delegatedValue[_proposalId][delegater];
+            if (value > 0) {
+                RTK.transfer(delegater, value);
+                delegatedValue[_proposalId][delegater] = 0;
             }
         }
     }
-     function isDAOmember(address user) external view returns (bool) {
-        return DAOmem[user];
+    //5
+
+    function buyRTK() external payable {
+        uint value = msg.value / 1 ether;
+        RTK.transferFrom(
+            address(RTK),
+            msg.sender,
+            value * (10 ** RTK.decimals())
+        );
     }
-    function getProposals(
+    //6
+
+    function delegate(uint _proposalId, address _to, uint _value) external {
+        RTK.transferFrom(msg.sender, address(this), _value);
+        proposalDelegaters[_proposalId].push(msg.sender);
+        delegatedValue[_proposalId][msg.sender] += _value;
+        delegatedWeight[_to] += _value;
+        userDelegations[msg.sender].push(
+            Delegation({proposalId: _proposalId, to: _to, value: _value})
+        );
+        emit Delegated(_proposalId, _to, _value);
+    }
+    //7
+    function isDAO(address addr) external view returns (bool) {
+        return DAOmembers[addr];
+    }
+
+    //8
+    function getMyDelegations() external view returns (Delegation[] memory) {
+        return userDelegations[msg.sender];
+    }
+
+    //9
+    function getProposal(
         uint _proposalId
     )
         external
         view
         returns (
             ProposalStatus status,
-            uint startTime,
+            Quorum quorum,
+            ProposalType propType,
             uint endTime,
-            Quorum quorumMechanism,
-            ProposalType proposalType,
-            address proposer,
-            address target,
             uint votesFor,
-            uint votesAgainst
+            uint votesAgainst,
+            address target,
+            address proposer,
+            uint needVotes,
+            uint valueForChange
         )
     {
         Proposal storage p = proposals[_proposalId];
         return (
             p.status,
-            p.startTime,
-            p.endTime,
             p.quorum,
-            p.proposalType,
-            p.proposer,
-            p.target,
+            p.propType,
+            p.endTime,
             p.votesFor,
-            p.votesAgainst
+            p.votesAgainst,
+            p.target,
+            p.proposer,
+            p.needVotes,
+            p.valueForChange
         );
     }
 }

@@ -1,78 +1,84 @@
-import { DAOcontract, signer } from "./init.js";
 import { ethers } from "./node_modules/ethers/dist/ethers.js";
-import { showNotification } from "./showNotifications.js";
+import { DAOcontract } from "./init.js";
 
-const proposalsContainer = document.querySelector('.proposalsList') || (() => {
+
+const proposalTypeNames = [
+    "A - Инвестирование в новый Старт ап",
+    "B - Инвестирование в существующий Старт ап",
+    "C - Добавление участника в систему",
+    "D - Удаление участника из системы",
+    "E - Изменение курса ситемного токена",
+    "F - Изменение курса Wrap-токена"
+]
+
+const quorumNames = [
+    "Простой - 50% + 1 голос",
+    "Супер - 2/3 голосов (ЗА)",
+    "Взвешенный - зависит от веса голоса"
+]
+
+
+const proposalContainer = document.querySelector('.proposalList') || (() => {
     const div = document.createElement('div');
-    div.className = 'proposalsList';
-    div.innerHTML = '<h2>Active Proposals</h2>';
-    document.body.insertBefore(div, document.querySelector('.connectWalletBtn').nextSibling);
+    div.className = 'proposalList';
+    div.innerHTML = '<h2>Активные предложения</h2>';
+    document.body.insertBefore(div, document.querySelector('.balanceValue').nextSibling);
     return div;
 })();
 
-
 export async function loadProposals() {
+    proposalContainer.innerHTML = '<h2>Активных предложений нет</h2>';
+
     const count = await DAOcontract.proposalCount();
-    proposalsContainer.innerHTML = '<h2>Active Proposals</h2>';
-
     for (let i = 0; i < Number(count); i++) {
-        const result = await DAOcontract.getProposals(i);
-
+        const result = await DAOcontract.getProposal(i);
         const [
             status,
+            quorum,
+            propType,
             endTime,
-            quorumMechanism,
-            proposalType,
-            proposer,
-            target,
             votesFor,
-            votesAgainst
+            votesAgainst,
+            target,
+            proposer,
+            needVotes,
+            valueForChange
         ] = result;
 
-
         if (Number(status) === 0) {
-            proposalsContainer.innerHTML += `
-  <div class="proposal" data-id="${i}">
-      <p>ID: ${i} | Type: ${proposalType}</p>
-      <p>Proposer: ${proposer}</p>
-      <p>Target: ${target}</p>
-      <p>Quorum mechanism ${quorumMechanism} </p>
-     <p>FOR: ${(Number(ethers.formatUnits(votesFor, 12))).toFixed(2)} | AGAINST: ${(Number(ethers.formatUnits(votesAgainst, 12))).toFixed(2)}</p>
-      <p>Ends in: <span class="timer" data-end="${Number(endTime)}"></span></p>
-      <button class="voteFromCardBtn">Vote</button>
-  </div>`;
+            proposalContainer.innerHTML = '<h2>Активные предложения</h2>';
+            const propName = proposalTypeNames[Number(propType)];
+            const quorumName = quorumNames[Number(quorum)];
+
+            proposalContainer.innerHTML += `
+            <div class="proposal" data-id="${i}">
+            <p>Предложение №${i} </p>
+            <p>Тип предложения: ${propName} | Кворум: ${quorumName}</p>
+            <p>Необходимо голосов: ${needVotes} | Новый курс токенов: ${valueForChange}</p>
+            <p>Цель: ${target} </p>
+            <p>Инициатор голосования: ${proposer} </p>
+            <p>Голоса ЗА: ${(Number(ethers.formatUnits(votesFor.toString(), 12))).toFixed(1)} | Против: ${(Number(ethers.formatUnits(votesAgainst.toString(), 12))).toFixed(1)} </p>
+            <p>Голосование закончится через: <span class="timer" data-end="${Number(endTime)}"> </span></p>
+            </div>`
         }
     }
-
-    const cards = proposalsContainer.querySelectorAll('.proposal');
-
+    const cards = document.querySelectorAll('.proposal');
     cards.forEach(card => {
-        const id = Number(card.dataset.id);
-        const btn = card.querySelector('.voteFromCardBtn');
         const timerSpan = card.querySelector('.timer');
-        const endSec = Number(timerSpan.dataset.end);
-
-
-        btn.addEventListener('click', () => {
-            document.querySelector('.voteProposalId').value = id;
-            showNotification(`Voting for proposal #${id}`);
-        });
+        const endSec = timerSpan.dataset.end;
 
         function updateTimer() {
-            const now = Date.now();
-            const diff = endSec * 1000 - now;
+            const now = Math.floor(Date.now() / 1000);
+            const diff = endSec - now;
             if (diff <= 0) {
-                timerSpan.textContent = 'finished';
+                proposalContainer.innerHTML = '<h2>Активных предложений нет</h2>';
                 return;
             }
-            const minutes = Math.floor(diff / 60000);
-            const seconds = Math.floor((diff % 60000) / 1000);
-            timerSpan.textContent = `${minutes}m ${seconds}s`;
+            const minutes = Math.floor(diff / 60);
+            const seconds = diff % 60;
+            timerSpan.textContent = `${minutes}м ${seconds}с`;
         }
         updateTimer();
         setInterval(updateTimer, 1000);
-    });
-    DAOcontract.on('CastVote', () => loadProposals());
+    }); DAOcontract.on('CastVote', () => loadProposals());
 }
-
-

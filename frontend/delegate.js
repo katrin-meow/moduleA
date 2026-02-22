@@ -1,34 +1,43 @@
-import {  DAOcontract } from "./init.js";
-import { showNotification } from "./showNotifications.js";
 import { ethers } from "./node_modules/ethers/dist/ethers.js";
-import { loadMyDelegations } from "./delegations.js";
+import { DAOcontract } from "./init.js";
+import { updateBalance } from "./balances.js";
+import { loadMyDeleg } from "./delegations.js";
 
 const delegateBtn = document.querySelector('.delegateBtn');
 
-async function delegateRTK() {
-    const toAddr = document.querySelector('.delegateAddr').value;
-    const valueRTK = Number(document.querySelector('.delegateValue').value);
-    const proposalId = Number(document.querySelector('.delegateId').value);
-    const valueWei = ethers.parseUnits(valueRTK.toString(), 12);
+async function delegate() {
+    const id = Number(document.querySelector('.delegateId').value);
+    const to = document.querySelector('.delegateTarget').value;
+    const value = Number(document.querySelector('.delegateValue').value);
+
     try {
-        delegateBtn.textContent = 'Delegating...';
+        delegateBtn.textContent = 'Делегирование...';
         delegateBtn.disabled = true;
-        const tx = await DAOcontract.delegate(toAddr, valueWei, proposalId);
+
+        const valueWei = await ethers.parseUnits(value.toString(), 12);
+        const tx = await DAOcontract.delegate(
+            id,
+            to,
+            valueWei
+        );
+
         await tx.wait();
-        document.querySelector('.delegateAddr').value = '';
-        document.querySelector('.delegateValue').value = '';
+        await updateBalance();
+        await loadMyDeleg();
+
+        alert(`Вы делегировали ${value} RTK`);
+
         document.querySelector('.delegateId').value = '';
-    } catch (err) {
-        console.error('DELEGATE ERROR:', err);
-        showNotification('Delegate failed!', 'error');
+        document.querySelector('.delegateTarget').value = '';
+        document.querySelector('.delegateValue').value = '';
+    } catch (error) {
+        console.error(error);
     } finally {
-        delegateBtn.textContent = 'Delegate';
+        delegateBtn.textContent = 'Делегировать';
         delegateBtn.disabled = false;
     }
 }
-
-loadMyDelegations();
 delegateBtn.addEventListener('click', (e) => {
     e.preventDefault();
-    delegateRTK();
-});
+    delegate();
+})
